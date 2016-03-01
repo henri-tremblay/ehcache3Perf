@@ -13,36 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package utils;
+package readonly.utils;
 
-import org.ehcache.exceptions.SerializerException;
 import org.ehcache.spi.serialization.Serializer;
 
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
+import java.nio.charset.Charset;
 
 /**
  * @author Ludovic Orban
  */
-public class StringAsCharSerializer implements Serializer<String> {
+public class StringCharsetSerializer implements Serializer<String> {
+  private static final Charset UTF_8 = Charset.forName("US-ASCII");
+
+  public StringCharsetSerializer() {
+  }
+
+  public StringCharsetSerializer(ClassLoader classLoader) {
+  }
+
   @Override
-  public ByteBuffer serialize(String object) throws SerializerException {
-    char[] chars = object.toCharArray();
-    ByteBuffer byteBuffer = ByteBuffer.allocate(chars.length * 2);
-    CharBuffer charBuffer = byteBuffer.asCharBuffer();
-    charBuffer.put(chars);
+  public ByteBuffer serialize(String object) {
+    byte[] bytes = object.getBytes(UTF_8);
+    ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.length);
+    byteBuffer.put(bytes).flip();
     return byteBuffer;
   }
 
   @Override
-  public String read(ByteBuffer binary) throws ClassNotFoundException, SerializerException {
-    char[] chars = new char[binary.remaining() / 2];
-    binary.asCharBuffer().get(chars);
-    return new String(chars);
+  public String read(ByteBuffer binary) throws ClassNotFoundException {
+    byte[] bytes = new byte[binary.remaining()];
+    binary.get(bytes);
+    return new String(bytes, UTF_8);
   }
 
   @Override
-  public boolean equals(String object, ByteBuffer binary) throws ClassNotFoundException, SerializerException {
+  public boolean equals(String object, ByteBuffer binary) throws ClassNotFoundException {
     return object.equals(read(binary));
   }
 }

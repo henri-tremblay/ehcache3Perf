@@ -13,22 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package onheap;
+package readonly.onheap;
 
 import io.rainfall.Runner;
 import io.rainfall.Scenario;
 import io.rainfall.configuration.ConcurrencyConfig;
 import io.rainfall.ehcache.statistics.EhcacheResult;
-import io.rainfall.ehcache2.CacheConfig;
-import io.rainfall.ehcache2.Ehcache2Operations;
+import io.rainfall.ehcache3.CacheConfig;
+import io.rainfall.ehcache3.Ehcache3Operations;
 import io.rainfall.generator.LongGenerator;
 import io.rainfall.generator.StringGenerator;
 import io.rainfall.generator.sequence.Distribution;
 import io.rainfall.unit.TimeDivision;
-import net.sf.ehcache.Cache;
-import net.sf.ehcache.CacheManager;
-import net.sf.ehcache.config.CacheConfiguration;
-import net.sf.ehcache.config.Configuration;
+import org.ehcache.Cache;
+import org.ehcache.CacheManager;
+import org.ehcache.config.builders.CacheConfigurationBuilder;
+import org.ehcache.config.builders.CacheManagerBuilder;
 
 import java.io.File;
 
@@ -38,33 +38,36 @@ import static io.rainfall.execution.Executions.during;
 import static io.rainfall.execution.Executions.times;
 
 /**
+ * analyze churn with $JAVA_HOME/bin/jmc
  * @author Ludovic Orban
  */
-public class Ehcache2 {
+public class Ehcache3 {
 
   public static void main(String[] args) throws Exception {
-    System.setProperty("com.tc.productkey.path", System.getProperty("user.home") + "/.tc/terracotta-license.key");
-    Configuration configuration = new Configuration();
-    CacheConfiguration cacheConfiguration = new CacheConfiguration("cache1", 0);
-    cacheConfiguration.setCopyOnRead(true);
-    cacheConfiguration.setCopyOnWrite(true);
-    configuration.addCache(cacheConfiguration);
-    CacheManager cacheManager = new CacheManager(configuration);
+    CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
+//        .using(new DefaultSerializationProviderConfiguration()
+//            .addSerializerFor(Long.class, (Class) CompactJavaSerializer.class)
+//            .addSerializerFor(String.class, (Class) CompactJavaSerializer.class)
+//        )
+        .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class)
+            .withKeySerializingCopier().withValueSerializingCopier()
+            .build())
+        .build(true);
 
-    final Cache cache1 = cacheManager.getCache("cache1");
+    Cache<Long, String> cache1 = cacheManager.getCache("cache1", Long.class, String.class);
 
     LongGenerator keyGenerator = new LongGenerator();
     StringGenerator valueGenerator = new StringGenerator(4096);
 
     CacheConfig<Long, String> cacheConfig = new CacheConfig<Long, String>();
-    cacheConfig.caches(cache1);
+    cacheConfig.cache("cache1", cache1);
 
     final int nbElementsPerThread = 100000;
-    final File reportPath = new File("target/rainfall/onheap/ehcache2");
+    final File reportPath = new File("target/rainfall/onheap/ehcache3");
     Runner.setUp(
         Scenario.scenario("Loading phase")
             .exec(
-                Ehcache2Operations.put(Long.class, String.class).using(keyGenerator, valueGenerator)
+                Ehcache3Operations.put(Long.class, String.class).using(keyGenerator, valueGenerator)
                     .sequentially()
             ))
         .executed(times(nbElementsPerThread))
@@ -79,7 +82,7 @@ public class Ehcache2 {
     Runner.setUp(
         Scenario.scenario("Testing phase")
             .exec(
-                Ehcache2Operations.get(Long.class, String.class).using(keyGenerator, valueGenerator)
+                Ehcache3Operations.get(Long.class, String.class).using(keyGenerator, valueGenerator)
                     .atRandom(Distribution.GAUSSIAN, 0, nbElementsPerThread, nbElementsPerThread/10)
             ))
         .executed(during(120, TimeDivision.seconds))
@@ -89,7 +92,7 @@ public class Ehcache2 {
             cacheConfig)
         .start();
 
-     cacheManager.shutdown();
+    cacheManager.close();
 
     System.exit(0);
   }

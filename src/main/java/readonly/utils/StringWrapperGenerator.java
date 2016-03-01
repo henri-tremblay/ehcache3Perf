@@ -13,22 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package utils;
+package readonly.utils;
 
 import io.rainfall.ObjectGenerator;
+import io.rainfall.generator.StringGenerator;
 
 /**
  * @author Ludovic Orban
  */
-public class LongWrapperGenerator implements ObjectGenerator<LongWrapper> {
+public class StringWrapperGenerator implements ObjectGenerator<StringWrapper> {
+
+  private final StringGenerator stringGenerator;
+
+  public StringWrapperGenerator(int length) {
+    stringGenerator = new StringGenerator(length);
+  }
 
   @Override
-  public LongWrapper generate(Long seed) {
-    return new LongWrapper(seed);
+  public StringWrapper generate(Long seed) {
+    return new StringWrapper(stringGenerator.generate(seed));
   }
 
   @Override
   public String getDescription() {
-    return "LongWrapper";
+    return "StringWrapper";
   }
 }

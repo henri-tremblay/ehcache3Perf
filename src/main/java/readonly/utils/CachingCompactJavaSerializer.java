@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package utils;
+package readonly.utils;
 
 import org.ehcache.exceptions.SerializerException;
 import org.ehcache.impl.serialization.CompactJavaSerializer;

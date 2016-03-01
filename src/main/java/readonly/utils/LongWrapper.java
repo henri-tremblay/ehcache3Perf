@@ -13,23 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package utils;
+package readonly.utils;
 
 import java.io.Serializable;
 
 /**
  * @author Ludovic Orban
  */
-public class StringWrapper implements Serializable {
+public class LongWrapper implements Serializable {
+  private final Long delegate;
 
-  private final String delegate;
-
-  public StringWrapper(String delegate) {
+  public LongWrapper(Long delegate) {
     this.delegate = delegate;
   }
 
-  public String getDelegate() {
+  public Long getDelegate() {
     return delegate;
   }
 
+  @Override
+  public int hashCode() {
+    return delegate.hashCode();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj instanceof LongWrapper) {
+      return ((LongWrapper) obj).getDelegate().equals(delegate);
+    }
+    return false;
+  }
 }

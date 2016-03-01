@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package disk2tiers;
+package readonly.disk3tiers;
 
 import io.rainfall.Runner;
 import io.rainfall.Scenario;
@@ -32,21 +32,17 @@ import org.ehcache.config.builders.CacheManagerBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.config.units.EntryUnit;
 import org.ehcache.config.units.MemoryUnit;
-import org.ehcache.core.statistics.AuthoritativeTierOperationOutcomes;
-import org.ehcache.core.statistics.CachingTierOperationOutcomes;
 import org.ehcache.impl.config.persistence.CacheManagerPersistenceConfiguration;
 import org.ehcache.impl.config.serializer.DefaultSerializationProviderConfiguration;
 import org.ehcache.impl.serialization.CompactJavaSerializer;
 
 import java.io.File;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import static io.rainfall.configuration.ReportingConfig.html;
 import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
 import static io.rainfall.execution.Executions.times;
-import static utils.Ehcache3Stats.findStat;
+import static readonly.utils.Ehcache3Stats.findStat;
 
 /**
  * @author Ludovic Orban
@@ -55,15 +51,15 @@ public class Ehcache3 {
 
   public static void main(String[] args) throws Exception {
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
-//        .using(new DefaultSerializationProviderConfiguration()
-//            .addSerializerFor(Long.class, (Class) CompactJavaSerializer.class)
-//            .addSerializerFor(String.class, (Class) CompactJavaSerializer.class)
-//        )
+        .using(new DefaultSerializationProviderConfiguration()
+            .addSerializerFor(Long.class, (Class) CompactJavaSerializer.class)
+            .addSerializerFor(String.class, (Class) CompactJavaSerializer.class)
+        )
         .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class)
             .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
-                .heap(1000, EntryUnit.ENTRIES).disk(2, MemoryUnit.GB))
+                .heap(1000, EntryUnit.ENTRIES).offheap(32, MemoryUnit.MB).disk(2, MemoryUnit.GB))
             )
-        .with(new CacheManagerPersistenceConfiguration(new File("target/rainfall/disk2tiers/ehcache3-persistence")))
+        .with(new CacheManagerPersistenceConfiguration(new File("target/rainfall/disk3tiers/ehcache3-persistence")))
         .build(true);
 
     final Cache<Long, String> cache1 = cacheManager.getCache("cache1", Long.class, String.class);
@@ -75,7 +71,7 @@ public class Ehcache3 {
     cacheConfig.cache("cache1", cache1);
 
     final int nbElementsPerThread = 100000;
-    final File reportPath = new File("target/rainfall/disk2tiers/ehcache3");
+    final File reportPath = new File("target/rainfall/disk3tiers/ehcache3");
     Runner.setUp(
         Scenario.scenario("Loading phase")
             .exec(
@@ -91,19 +87,22 @@ public class Ehcache3 {
 
     System.out.println("testing...");
 
-    Timer t = new Timer(true);
-    t.schedule(new TimerTask() {
-      @Override
-      public void run() {
-        long onHeapHits = findStat(cache1, "getOrComputeIfAbsent", "onheap-store").count(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT);
-        long diskHits = findStat(cache1, "computeIfAbsentAndFault", "local-disk").count(AuthoritativeTierOperationOutcomes.ComputeIfAbsentAndFaultOutcome.HIT);
-        long total = onHeapHits + diskHits;
-        System.out.println("        heap hits: " + onHeapHits);
-        System.out.println("        disk hits: " + diskHits);
-        System.out.printf ("   heap hit ratio: %.1f%%\n", ((double) onHeapHits / total * 100.0));
-        System.out.printf ("   disk hit ratio: %.1f%%\n", ((double) diskHits / total * 100.0));
-      }
-    }, 1000, 1000);
+//    Timer t = new Timer(true);
+//    t.schedule(new TimerTask() {
+//      @Override
+//      public void run() {
+//        long onHeapHits = findStat(cache1, "getOrComputeIfAbsent", "onheap-store").count(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT);
+//        long offHeapHits = findStat(cache1, "getAndRemove", "local-offheap").count(LowerCachingTierOperationsOutcome.GetAndRemoveOutcome.HIT_REMOVED);
+//        long diskHits = findStat(cache1, "computeIfAbsentAndFault", "local-disk").count(AuthoritativeTierOperationOutcomes.ComputeIfAbsentAndFaultOutcome.HIT);
+//        long total = onHeapHits + offHeapHits + diskHits;
+//        System.out.println("        heap hits: " + onHeapHits);
+//        System.out.println("     offheap hits: " + offHeapHits);
+//        System.out.println("        disk hits: " + diskHits);
+//        System.out.printf ("   heap hit ratio: %.1f%%\n", ((double) onHeapHits / total * 100.0));
+//        System.out.printf ("offheap hit ratio: %.1f%%\n", ((double) offHeapHits / total * 100.0));
+//        System.out.printf ("   disk hit ratio: %.1f%%\n", ((double) diskHits / total * 100.0));
+//      }
+//    }, 1000, 1000);
 
 
     Runner.setUp(

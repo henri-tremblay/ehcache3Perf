@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package disk2tiers;
+package readonly.disk3tiers;
 
 import io.rainfall.Runner;
 import io.rainfall.Scenario;
@@ -46,11 +46,10 @@ import static io.rainfall.execution.Executions.times;
 public class Ehcache2 {
 
   public static void main(String[] args) throws Exception {
-    // no license because we want to test against the ehcache 2 OS disk store, this should fail if ehcache-ee is used
-//    System.setProperty("com.tc.productkey.path", System.getProperty("user.home") + "/.tc/terracotta-license.key");
-
+    System.setProperty("com.tc.productkey.path", System.getProperty("user.home") + "/.tc/terracotta-license.key");
     Configuration configuration = new Configuration();
     CacheConfiguration cacheConfiguration = new CacheConfiguration("cache1", 1000);
+    cacheConfiguration.setMaxBytesLocalOffHeap(MemoryUnit.parseSizeInBytes("32M"));
     cacheConfiguration.setMaxBytesLocalDisk(MemoryUnit.parseSizeInBytes("2G"));
     configuration.addCache(cacheConfiguration);
     CacheManager cacheManager = new CacheManager(configuration);
@@ -64,7 +63,7 @@ public class Ehcache2 {
     cacheConfig.caches(cache1);
 
     final int nbElementsPerThread = 100000;
-    final File reportPath = new File("target/rainfall/disk2tiers/ehcache2");
+    final File reportPath = new File("target/rainfall/disk3tiers/ehcache2");
     Runner.setUp(
         Scenario.scenario("Loading phase")
             .exec(
@@ -85,11 +84,14 @@ public class Ehcache2 {
       @Override
       public void run() {
         long onHeapHits = cache1.getStatistics().localHeapHitCount();
+        long offHeapHits = cache1.getStatistics().localOffHeapHitCount();
         long diskHits = cache1.getStatistics().localDiskHitCount();
-        long total = onHeapHits + diskHits;
+        long total = onHeapHits + offHeapHits + diskHits;
         System.out.println("        heap hits: " + onHeapHits);
+        System.out.println("     offheap hits: " + offHeapHits);
         System.out.println("        disk hits: " + diskHits);
         System.out.printf ("   heap hit ratio: %.1f%%\n", ((double) onHeapHits / total * 100.0));
+        System.out.printf ("offheap hit ratio: %.1f%%\n", ((double) offHeapHits / total * 100.0));
         System.out.printf ("   disk hit ratio: %.1f%%\n", ((double) diskHits / total * 100.0));
       }
     }, 1000, 1000);

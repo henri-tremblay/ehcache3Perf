@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package disk3tiers;
+package readonly.onheap;
 
 import io.rainfall.Runner;
 import io.rainfall.Scenario;
@@ -29,11 +29,8 @@ import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.config.CacheConfiguration;
 import net.sf.ehcache.config.Configuration;
-import net.sf.ehcache.config.MemoryUnit;
 
 import java.io.File;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import static io.rainfall.configuration.ReportingConfig.html;
 import static io.rainfall.configuration.ReportingConfig.report;
@@ -48,9 +45,9 @@ public class Ehcache2 {
   public static void main(String[] args) throws Exception {
     System.setProperty("com.tc.productkey.path", System.getProperty("user.home") + "/.tc/terracotta-license.key");
     Configuration configuration = new Configuration();
-    CacheConfiguration cacheConfiguration = new CacheConfiguration("cache1", 1000);
-    cacheConfiguration.setMaxBytesLocalOffHeap(MemoryUnit.parseSizeInBytes("32M"));
-    cacheConfiguration.setMaxBytesLocalDisk(MemoryUnit.parseSizeInBytes("2G"));
+    CacheConfiguration cacheConfiguration = new CacheConfiguration("cache1", 0);
+    cacheConfiguration.setCopyOnRead(true);
+    cacheConfiguration.setCopyOnWrite(true);
     configuration.addCache(cacheConfiguration);
     CacheManager cacheManager = new CacheManager(configuration);
 
@@ -63,7 +60,7 @@ public class Ehcache2 {
     cacheConfig.caches(cache1);
 
     final int nbElementsPerThread = 100000;
-    final File reportPath = new File("target/rainfall/disk3tiers/ehcache2");
+    final File reportPath = new File("target/rainfall/onheap/ehcache2");
     Runner.setUp(
         Scenario.scenario("Loading phase")
             .exec(
@@ -78,23 +75,6 @@ public class Ehcache2 {
         .start();
 
     System.out.println("testing...");
-
-    Timer t = new Timer(true);
-    t.schedule(new TimerTask() {
-      @Override
-      public void run() {
-        long onHeapHits = cache1.getStatistics().localHeapHitCount();
-        long offHeapHits = cache1.getStatistics().localOffHeapHitCount();
-        long diskHits = cache1.getStatistics().localDiskHitCount();
-        long total = onHeapHits + offHeapHits + diskHits;
-        System.out.println("        heap hits: " + onHeapHits);
-        System.out.println("     offheap hits: " + offHeapHits);
-        System.out.println("        disk hits: " + diskHits);
-        System.out.printf ("   heap hit ratio: %.1f%%\n", ((double) onHeapHits / total * 100.0));
-        System.out.printf ("offheap hit ratio: %.1f%%\n", ((double) offHeapHits / total * 100.0));
-        System.out.printf ("   disk hit ratio: %.1f%%\n", ((double) diskHits / total * 100.0));
-      }
-    }, 1000, 1000);
 
     Runner.setUp(
         Scenario.scenario("Testing phase")
