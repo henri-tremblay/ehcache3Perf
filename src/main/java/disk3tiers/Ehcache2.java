@@ -59,7 +59,7 @@ public class Ehcache2 {
     LongGenerator keyGenerator = new LongGenerator();
     StringGenerator valueGenerator = new StringGenerator(4096);
 
-    CacheConfig<Long, String> cacheConfig = new CacheConfig<>();
+    CacheConfig<Long, String> cacheConfig = new CacheConfig<Long, String>();
     cacheConfig.caches(cache1);
 
     final int nbElementsPerThread = 100000;

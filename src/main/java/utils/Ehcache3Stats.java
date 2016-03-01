@@ -40,7 +40,7 @@ import static org.terracotta.context.query.QueryBuilder.queryBuilder;
  */
 public class Ehcache3Stats {
 
-  public static OperationStatistic findStat(Cache<Long, String> cache1, final String statName, final String tag) {
+  public static OperationStatistic findStat(Cache<?, ?> cache1, final String statName, final String tag) {
     Query q = queryBuilder().chain(self())
         .descendants().filter(context(identifier(subclassOf(OperationStatistic.class)))).build();
 

@@ -38,13 +38,19 @@ import static io.rainfall.execution.Executions.during;
 import static io.rainfall.execution.Executions.times;
 
 /**
+ * analyze churn with $JAVA_HOME/bin/jmc
  * @author Ludovic Orban
  */
 public class Ehcache3 {
 
   public static void main(String[] args) throws Exception {
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
+//        .using(new DefaultSerializationProviderConfiguration()
+//            .addSerializerFor(Long.class, (Class) CompactJavaSerializer.class)
+//            .addSerializerFor(String.class, (Class) CompactJavaSerializer.class)
+//        )
         .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class)
+            .withKeySerializingCopier().withValueSerializingCopier()
             .build())
         .build(true);
 
@@ -53,7 +59,7 @@ public class Ehcache3 {
     LongGenerator keyGenerator = new LongGenerator();
     StringGenerator valueGenerator = new StringGenerator(4096);
 
-    CacheConfig<Long, String> cacheConfig = new CacheConfig<>();
+    CacheConfig<Long, String> cacheConfig = new CacheConfig<Long, String>();
     cacheConfig.cache("cache1", cache1);
 
     final int nbElementsPerThread = 100000;
@@ -77,7 +83,7 @@ public class Ehcache3 {
         Scenario.scenario("Testing phase")
             .exec(
                 Ehcache3Operations.get(Long.class, String.class).using(keyGenerator, valueGenerator)
-                    .atRandom(Distribution.GAUSSIAN, 0, nbElementsPerThread, 10)
+                    .atRandom(Distribution.GAUSSIAN, 0, nbElementsPerThread, nbElementsPerThread/10)
             ))
         .executed(during(120, TimeDivision.seconds))
         .config(

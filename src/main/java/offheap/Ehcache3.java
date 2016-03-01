@@ -34,6 +34,8 @@ import org.ehcache.config.units.EntryUnit;
 import org.ehcache.config.units.MemoryUnit;
 import org.ehcache.core.statistics.AuthoritativeTierOperationOutcomes;
 import org.ehcache.core.statistics.CachingTierOperationOutcomes;
+import utils.StringAsCharSerializer;
+import utils.StringCharsetSerializer;
 
 import java.io.File;
 import java.util.Timer;
@@ -63,7 +65,7 @@ public class Ehcache3 {
     LongGenerator keyGenerator = new LongGenerator();
     StringGenerator valueGenerator = new StringGenerator(4096);
 
-    CacheConfig<Long, String> cacheConfig = new CacheConfig<>();
+    CacheConfig<Long, String> cacheConfig = new CacheConfig<Long, String>();
     cacheConfig.cache("cache1", cache1);
 
     final int nbElementsPerThread = 100000;

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package onheap;
+package offheap;
 
 import io.rainfall.Runner;
 import io.rainfall.Scenario;
@@ -21,16 +21,21 @@ import io.rainfall.configuration.ConcurrencyConfig;
 import io.rainfall.ehcache.statistics.EhcacheResult;
 import io.rainfall.ehcache2.CacheConfig;
 import io.rainfall.ehcache2.Ehcache2Operations;
-import io.rainfall.generator.LongGenerator;
-import io.rainfall.generator.StringGenerator;
 import io.rainfall.generator.sequence.Distribution;
 import io.rainfall.unit.TimeDivision;
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.config.CacheConfiguration;
 import net.sf.ehcache.config.Configuration;
+import net.sf.ehcache.config.MemoryUnit;
+import utils.LongWrapper;
+import utils.LongWrapperGenerator;
+import utils.StringWrapper;
+import utils.StringWrapperGenerator;
 
 import java.io.File;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import static io.rainfall.configuration.ReportingConfig.html;
 import static io.rainfall.configuration.ReportingConfig.report;
@@ -40,31 +45,30 @@ import static io.rainfall.execution.Executions.times;
 /**
  * @author Ludovic Orban
  */
-public class Ehcache2 {
+public class Ehcache2_serializable {
 
   public static void main(String[] args) throws Exception {
     System.setProperty("com.tc.productkey.path", System.getProperty("user.home") + "/.tc/terracotta-license.key");
     Configuration configuration = new Configuration();
-    CacheConfiguration cacheConfiguration = new CacheConfiguration("cache1", 0);
-    cacheConfiguration.setCopyOnRead(true);
-    cacheConfiguration.setCopyOnWrite(true);
+    CacheConfiguration cacheConfiguration = new CacheConfiguration("cache1", 1000);
+    cacheConfiguration.setMaxBytesLocalOffHeap(MemoryUnit.parseSizeInBytes("2G"));
     configuration.addCache(cacheConfiguration);
     CacheManager cacheManager = new CacheManager(configuration);
 
     final Cache cache1 = cacheManager.getCache("cache1");
 
-    LongGenerator keyGenerator = new LongGenerator();
-    StringGenerator valueGenerator = new StringGenerator(4096);
+    LongWrapperGenerator keyGenerator = new LongWrapperGenerator();
+    StringWrapperGenerator valueGenerator = new StringWrapperGenerator(4096);
 
-    CacheConfig<Long, String> cacheConfig = new CacheConfig<Long, String>();
+    CacheConfig<LongWrapper, StringWrapper> cacheConfig = new CacheConfig<LongWrapper, StringWrapper>();
     cacheConfig.caches(cache1);
 
     final int nbElementsPerThread = 100000;
-    final File reportPath = new File("target/rainfall/onheap/ehcache2");
+    final File reportPath = new File("target/rainfall/offheap/ehcache2");
     Runner.setUp(
         Scenario.scenario("Loading phase")
             .exec(
-                Ehcache2Operations.put(Long.class, String.class).using(keyGenerator, valueGenerator)
+                Ehcache2Operations.put(LongWrapper.class, StringWrapper.class).using(keyGenerator, valueGenerator)
                     .sequentially()
             ))
         .executed(times(nbElementsPerThread))
@@ -76,10 +80,24 @@ public class Ehcache2 {
 
     System.out.println("testing...");
 
+    Timer t = new Timer(true);
+    t.schedule(new TimerTask() {
+      @Override
+      public void run() {
+        long onHeapHits = cache1.getStatistics().localHeapHitCount();
+        long offHeapHits = cache1.getStatistics().localOffHeapHitCount();
+        long total = onHeapHits + offHeapHits;
+        System.out.println("        heap hits: " + onHeapHits);
+        System.out.println("     offheap hits: " + offHeapHits);
+        System.out.printf ("   heap hit ratio: %.1f%%\n", ((double) onHeapHits / total * 100.0));
+        System.out.printf ("offheap hit ratio: %.1f%%\n", ((double) offHeapHits / total * 100.0));
+      }
+    }, 1000, 1000);
+
     Runner.setUp(
         Scenario.scenario("Testing phase")
             .exec(
-                Ehcache2Operations.get(Long.class, String.class).using(keyGenerator, valueGenerator)
+                Ehcache2Operations.get(LongWrapper.class, StringWrapper.class).using(keyGenerator, valueGenerator)
                     .atRandom(Distribution.GAUSSIAN, 0, nbElementsPerThread, nbElementsPerThread/10)
             ))
         .executed(during(120, TimeDivision.seconds))

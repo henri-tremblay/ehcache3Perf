@@ -47,7 +47,7 @@ public class Ehcache2 {
 
   public static void main(String[] args) throws Exception {
     // no license because we want to test against the ehcache 2 OS disk store, this should fail if ehcache-ee is used
-    //System.setProperty("com.tc.productkey.path", System.getProperty("user.home") + "/.tc/terracotta-license.key");
+//    System.setProperty("com.tc.productkey.path", System.getProperty("user.home") + "/.tc/terracotta-license.key");
 
     Configuration configuration = new Configuration();
     CacheConfiguration cacheConfiguration = new CacheConfiguration("cache1", 1000);
@@ -60,7 +60,7 @@ public class Ehcache2 {
     LongGenerator keyGenerator = new LongGenerator();
     StringGenerator valueGenerator = new StringGenerator(4096);
 
-    CacheConfig<Long, String> cacheConfig = new CacheConfig<>();
+    CacheConfig<Long, String> cacheConfig = new CacheConfig<Long, String>();
     cacheConfig.caches(cache1);
 
     final int nbElementsPerThread = 100000;

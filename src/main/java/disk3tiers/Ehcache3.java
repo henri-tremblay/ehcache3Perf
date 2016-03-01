@@ -36,6 +36,8 @@ import org.ehcache.core.statistics.AuthoritativeTierOperationOutcomes;
 import org.ehcache.core.statistics.CachingTierOperationOutcomes;
 import org.ehcache.core.statistics.LowerCachingTierOperationsOutcome;
 import org.ehcache.impl.config.persistence.CacheManagerPersistenceConfiguration;
+import org.ehcache.impl.config.serializer.DefaultSerializationProviderConfiguration;
+import org.ehcache.impl.serialization.CompactJavaSerializer;
 
 import java.io.File;
 import java.util.Timer;
@@ -54,6 +56,10 @@ public class Ehcache3 {
 
   public static void main(String[] args) throws Exception {
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
+        .using(new DefaultSerializationProviderConfiguration()
+            .addSerializerFor(Long.class, (Class) CompactJavaSerializer.class)
+            .addSerializerFor(String.class, (Class) CompactJavaSerializer.class)
+        )
         .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class)
             .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
                 .heap(1000, EntryUnit.ENTRIES).offheap(32, MemoryUnit.MB).disk(2, MemoryUnit.GB))
@@ -66,7 +72,7 @@ public class Ehcache3 {
     LongGenerator keyGenerator = new LongGenerator();
     StringGenerator valueGenerator = new StringGenerator(4096);
 
-    CacheConfig<Long, String> cacheConfig = new CacheConfig<>();
+    CacheConfig<Long, String> cacheConfig = new CacheConfig<Long, String>();
     cacheConfig.cache("cache1", cache1);
 
     final int nbElementsPerThread = 100000;
@@ -86,22 +92,22 @@ public class Ehcache3 {
 
     System.out.println("testing...");
 
-    Timer t = new Timer(true);
-    t.schedule(new TimerTask() {
-      @Override
-      public void run() {
-        long onHeapHits = findStat(cache1, "getOrComputeIfAbsent", "onheap-store").count(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT);
-        long offHeapHits = findStat(cache1, "getAndRemove", "local-offheap").count(LowerCachingTierOperationsOutcome.GetAndRemoveOutcome.HIT_REMOVED);
-        long diskHits = findStat(cache1, "computeIfAbsentAndFault", "local-disk").count(AuthoritativeTierOperationOutcomes.ComputeIfAbsentAndFaultOutcome.HIT);
-        long total = onHeapHits + offHeapHits + diskHits;
-        System.out.println("        heap hits: " + onHeapHits);
-        System.out.println("     offheap hits: " + offHeapHits);
-        System.out.println("        disk hits: " + diskHits);
-        System.out.printf ("   heap hit ratio: %.1f%%\n", ((double) onHeapHits / total * 100.0));
-        System.out.printf ("offheap hit ratio: %.1f%%\n", ((double) offHeapHits / total * 100.0));
-        System.out.printf ("   disk hit ratio: %.1f%%\n", ((double) diskHits / total * 100.0));
-      }
-    }, 1000, 1000);
+//    Timer t = new Timer(true);
+//    t.schedule(new TimerTask() {
+//      @Override
+//      public void run() {
+//        long onHeapHits = findStat(cache1, "getOrComputeIfAbsent", "onheap-store").count(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT);
+//        long offHeapHits = findStat(cache1, "getAndRemove", "local-offheap").count(LowerCachingTierOperationsOutcome.GetAndRemoveOutcome.HIT_REMOVED);
+//        long diskHits = findStat(cache1, "computeIfAbsentAndFault", "local-disk").count(AuthoritativeTierOperationOutcomes.ComputeIfAbsentAndFaultOutcome.HIT);
+//        long total = onHeapHits + offHeapHits + diskHits;
+//        System.out.println("        heap hits: " + onHeapHits);
+//        System.out.println("     offheap hits: " + offHeapHits);
+//        System.out.println("        disk hits: " + diskHits);
+//        System.out.printf ("   heap hit ratio: %.1f%%\n", ((double) onHeapHits / total * 100.0));
+//        System.out.printf ("offheap hit ratio: %.1f%%\n", ((double) offHeapHits / total * 100.0));
+//        System.out.printf ("   disk hit ratio: %.1f%%\n", ((double) diskHits / total * 100.0));
+//      }
+//    }, 1000, 1000);
 
 
     Runner.setUp(
