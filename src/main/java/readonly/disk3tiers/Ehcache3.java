@@ -42,7 +42,6 @@ import static io.rainfall.configuration.ReportingConfig.html;
 import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
 import static io.rainfall.execution.Executions.times;
-import static readonly.utils.Ehcache3Stats.findStat;
 
 /**
  * @author Ludovic Orban
@@ -71,7 +70,7 @@ public class Ehcache3 {
     cacheConfig.cache("cache1", cache1);
 
     final int nbElementsPerThread = 100000;
-    final File reportPath = new File("target/rainfall/disk3tiers/ehcache3");
+    final File reportPath = new File("target/rainfall/" + Ehcache3.class.getName().replace('.', '/'));
     Runner.setUp(
         Scenario.scenario("Loading phase")
             .exec(

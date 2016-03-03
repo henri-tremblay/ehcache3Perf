@@ -37,7 +37,7 @@ import org.ehcache.core.statistics.AuthoritativeTierOperationOutcomes;
 import org.ehcache.core.statistics.CachingTierOperationOutcomes;
 import org.ehcache.expiry.Duration;
 import org.ehcache.expiry.Expiry;
-import readonly.utils.ProfilingCompactJavaSerializer;
+import utils.ProfilingCompactJavaSerializer;
 
 import java.io.File;
 import java.util.Timer;
@@ -47,7 +47,7 @@ import static io.rainfall.configuration.ReportingConfig.html;
 import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
 import static io.rainfall.execution.Executions.times;
-import static readonly.utils.Ehcache3Stats.findStat;
+import static utils.Ehcache3Stats.findStat;
 
 /**
  * @author Ludovic Orban
@@ -94,7 +94,7 @@ public class Ehcache3_profiling {
     cacheConfig.cache("cache1", cache1);
 
     final int nbElementsPerThread = 100000;
-    final File reportPath = new File("target/rainfall/offheap/ehcache3");
+    final File reportPath = new File("target/rainfall/" + Ehcache3_profiling.class.getName().replace('.', '/'));
     Runner.setUp(
         Scenario.scenario("Loading phase")
             .exec(

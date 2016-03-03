@@ -28,10 +28,10 @@ import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.config.CacheConfiguration;
 import net.sf.ehcache.config.Configuration;
 import net.sf.ehcache.config.MemoryUnit;
-import readonly.utils.LongWrapper;
-import readonly.utils.LongWrapperGenerator;
-import readonly.utils.StringWrapper;
-import readonly.utils.StringWrapperGenerator;
+import utils.LongWrapper;
+import utils.LongWrapperGenerator;
+import utils.StringWrapper;
+import utils.StringWrapperGenerator;
 
 import java.io.File;
 import java.util.Timer;
@@ -64,7 +64,7 @@ public class Ehcache2_serializable {
     cacheConfig.caches(cache1);
 
     final int nbElementsPerThread = 100000;
-    final File reportPath = new File("target/rainfall/offheap/ehcache2");
+    final File reportPath = new File("target/rainfall/" + Ehcache2_serializable.class.getName().replace('.', '/'));
     Runner.setUp(
         Scenario.scenario("Loading phase")
             .exec(

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package readonly.utils;
+package utils;
 
 import net.sf.ehcache.util.concurrent.LongAdder;
 import org.ehcache.exceptions.SerializerException;

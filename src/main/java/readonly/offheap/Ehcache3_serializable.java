@@ -32,11 +32,11 @@ import org.ehcache.config.units.EntryUnit;
 import org.ehcache.config.units.MemoryUnit;
 import org.ehcache.core.statistics.AuthoritativeTierOperationOutcomes;
 import org.ehcache.core.statistics.CachingTierOperationOutcomes;
-import readonly.utils.ClassCachingCompactJavaSerializer;
-import readonly.utils.LongWrapper;
-import readonly.utils.LongWrapperGenerator;
-import readonly.utils.StringWrapper;
-import readonly.utils.StringWrapperGenerator;
+import utils.ClassCachingCompactJavaSerializer;
+import utils.LongWrapper;
+import utils.LongWrapperGenerator;
+import utils.StringWrapper;
+import utils.StringWrapperGenerator;
 
 import java.io.File;
 import java.util.Timer;
@@ -46,7 +46,7 @@ import static io.rainfall.configuration.ReportingConfig.html;
 import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
 import static io.rainfall.execution.Executions.times;
-import static readonly.utils.Ehcache3Stats.findStat;
+import static utils.Ehcache3Stats.findStat;
 
 /**
  * @author Ludovic Orban
@@ -72,7 +72,7 @@ public class Ehcache3_serializable {
     cacheConfig.cache("cache1", cache1);
 
     final int nbElementsPerThread = 100000;
-    final File reportPath = new File("target/rainfall/offheap/ehcache3");
+    final File reportPath = new File("target/rainfall/" + Ehcache3_serializable.class.getName().replace('.', '/'));
     Runner.setUp(
         Scenario.scenario("Loading phase")
             .exec(

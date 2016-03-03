@@ -62,7 +62,7 @@ public class Ehcache2 {
     cacheConfig.caches(cache1);
 
     final int nbElementsPerThread = 100000;
-    final File reportPath = new File("target/rainfall/offheap/ehcache2");
+    final File reportPath = new File("target/rainfall/" + Ehcache2.class.getName().replace('.', '/'));
     Runner.setUp(
         Scenario.scenario("Loading phase")
             .exec(
