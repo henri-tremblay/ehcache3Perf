@@ -32,7 +32,6 @@ import org.ehcache.config.units.EntryUnit;
 import org.ehcache.config.units.MemoryUnit;
 import org.ehcache.core.statistics.AuthoritativeTierOperationOutcomes;
 import org.ehcache.core.statistics.CachingTierOperationOutcomes;
-import utils.ClassCachingCompactJavaSerializer;
 import utils.LongWrapper;
 import utils.LongWrapperGenerator;
 import utils.StringWrapper;
@@ -56,8 +55,6 @@ public class Ehcache3_serializable {
   public static void main(String[] args) throws Exception {
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
         .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(LongWrapper.class, StringWrapper.class)
-            .withKeySerializer(new ClassCachingCompactJavaSerializer<LongWrapper>())
-            .withValueSerializer(new ClassCachingCompactJavaSerializer<StringWrapper>())
             .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
                 .heap(1000, EntryUnit.ENTRIES).offheap(2, MemoryUnit.GB))
             .build())
