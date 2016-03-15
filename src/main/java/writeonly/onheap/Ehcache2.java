@@ -20,16 +20,14 @@ import io.rainfall.Scenario;
 import io.rainfall.ScenarioRun;
 import io.rainfall.configuration.ConcurrencyConfig;
 import io.rainfall.ehcache.statistics.EhcacheResult;
-import io.rainfall.ehcache3.CacheConfig;
-import io.rainfall.ehcache3.Ehcache3Operations;
+import io.rainfall.ehcache2.CacheConfig;
+import io.rainfall.ehcache2.Ehcache2Operations;
 import io.rainfall.generator.LongGenerator;
 import io.rainfall.unit.TimeDivision;
-import org.ehcache.Cache;
-import org.ehcache.CacheManager;
-import org.ehcache.config.builders.CacheConfigurationBuilder;
-import org.ehcache.config.builders.CacheManagerBuilder;
-import org.ehcache.config.builders.ResourcePoolsBuilder;
-import org.ehcache.config.units.EntryUnit;
+import net.sf.ehcache.Cache;
+import net.sf.ehcache.CacheManager;
+import net.sf.ehcache.config.CacheConfiguration;
+import net.sf.ehcache.config.Configuration;
 import utils.ConstantStringGenerator;
 
 import java.io.File;
@@ -38,30 +36,30 @@ import static io.rainfall.configuration.ReportingConfig.html;
 import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
 
-public class Ehcache3 {
+public class Ehcache2 {
 
   public static void main(String[] args) throws Exception {
-    CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
-        .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class)
-            .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder().heap(100000L, EntryUnit.ENTRIES))
-            .build())
-        .build(true);
+    System.setProperty("com.tc.productkey.path", System.getProperty("user.home") + "/.tc/terracotta-license.key");
+    Configuration configuration = new Configuration();
+    CacheConfiguration cacheConfiguration = new CacheConfiguration("cache1", 100000);
+    configuration.addCache(cacheConfiguration);
+    CacheManager cacheManager = new CacheManager(configuration);
 
-    Cache<Long, String> cache1 = cacheManager.getCache("cache1", Long.class, String.class);
+    final Cache cache1 = cacheManager.getCache("cache1");
 
     LongGenerator keyGenerator = new LongGenerator();
     ConstantStringGenerator valueGenerator = new ConstantStringGenerator(4096);
 
     CacheConfig<Long, String> cacheConfig = new CacheConfig<Long, String>();
-    cacheConfig.cache("cache1", cache1);
+    cacheConfig.caches(cache1);
 
-    final File reportPath = new File("target/rainfall/" + Ehcache3.class.getName().replace('.', '/'));
+    final File reportPath = new File("target/rainfall/" + Ehcache2.class.getName().replace('.', '/'));
 
     System.out.println("testing...");
     ScenarioRun scenarioRun = Runner.setUp(
         Scenario.scenario("Testing phase")
             .exec(
-                Ehcache3Operations.put(Long.class, String.class).using(keyGenerator, valueGenerator)
+                Ehcache2Operations.put(Long.class, String.class).using(keyGenerator, valueGenerator)
                     .sequentially()
             ))
         .executed(during(120, TimeDivision.seconds))
@@ -73,7 +71,7 @@ public class Ehcache3 {
 
     scenarioRun.start();
 
-    cacheManager.close();
+    cacheManager.shutdown();
 
     System.exit(0);
   }

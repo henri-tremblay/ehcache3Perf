@@ -13,84 +13,67 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package readonly.onheap;
+package writeonly.offheap;
 
 import io.rainfall.Runner;
 import io.rainfall.Scenario;
+import io.rainfall.ScenarioRun;
 import io.rainfall.configuration.ConcurrencyConfig;
 import io.rainfall.ehcache.statistics.EhcacheResult;
 import io.rainfall.ehcache3.CacheConfig;
 import io.rainfall.ehcache3.Ehcache3Operations;
 import io.rainfall.generator.LongGenerator;
-import io.rainfall.generator.StringGenerator;
-import io.rainfall.generator.sequence.Distribution;
 import io.rainfall.unit.TimeDivision;
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
+import org.ehcache.config.builders.ResourcePoolsBuilder;
+import org.ehcache.config.units.EntryUnit;
+import org.ehcache.config.units.MemoryUnit;
+import utils.ConstantStringGenerator;
 
 import java.io.File;
 
 import static io.rainfall.configuration.ReportingConfig.html;
 import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
-import static io.rainfall.execution.Executions.times;
 
-/**
- * analyze churn with $JAVA_HOME/bin/jmc
- * @author Ludovic Orban
- */
 public class Ehcache3 {
 
   public static void main(String[] args) throws Exception {
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
-//        .using(new DefaultSerializationProviderConfiguration()
-//            .addSerializerFor(Long.class, (Class) CompactJavaSerializer.class)
-//            .addSerializerFor(String.class, (Class) CompactJavaSerializer.class)
-//        )
         .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class)
-//            .withKeySerializingCopier().withValueSerializingCopier()
+            .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
+                .heap(1000L, EntryUnit.ENTRIES).offheap(2, MemoryUnit.GB))
             .build())
         .build(true);
 
     Cache<Long, String> cache1 = cacheManager.getCache("cache1", Long.class, String.class);
 
     LongGenerator keyGenerator = new LongGenerator();
-    StringGenerator valueGenerator = new StringGenerator(4096);
+    ConstantStringGenerator valueGenerator = new ConstantStringGenerator(4096);
 
     CacheConfig<Long, String> cacheConfig = new CacheConfig<Long, String>();
     cacheConfig.cache("cache1", cache1);
 
-    final int nbElementsPerThread = 100000;
     final File reportPath = new File("target/rainfall/" + Ehcache3.class.getName().replace('.', '/'));
-    Runner.setUp(
-        Scenario.scenario("Loading phase")
+
+    System.out.println("testing...");
+    ScenarioRun scenarioRun = Runner.setUp(
+        Scenario.scenario("Testing phase")
             .exec(
                 Ehcache3Operations.put(Long.class, String.class).using(keyGenerator, valueGenerator)
                     .sequentially()
             ))
-        .executed(times(nbElementsPerThread))
-        .config(
-            ConcurrencyConfig.concurrencyConfig().threads(1),
-            report(EhcacheResult.class),
-            cacheConfig)
-        .start();
-
-    System.out.println("testing...");
-
-    Runner.setUp(
-        Scenario.scenario("Testing phase")
-            .exec(
-                Ehcache3Operations.get(Long.class, String.class).using(keyGenerator, valueGenerator)
-                    .atRandom(Distribution.GAUSSIAN, 0, nbElementsPerThread, nbElementsPerThread/10)
-            ))
         .executed(during(120, TimeDivision.seconds))
         .config(
             ConcurrencyConfig.concurrencyConfig().threads(Runtime.getRuntime().availableProcessors()),
-            report(EhcacheResult.class, new EhcacheResult[] {EhcacheResult.GET, EhcacheResult.MISS}).log(html(reportPath.getPath())),
-            cacheConfig)
-        .start();
+            report(EhcacheResult.class, new EhcacheResult[]{EhcacheResult.PUT}).log(html(reportPath.getPath())),
+            cacheConfig);
+
+
+    scenarioRun.start();
 
     cacheManager.close();
 
