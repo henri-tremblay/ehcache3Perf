@@ -32,9 +32,11 @@ import org.ehcache.config.builders.CacheManagerBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.config.units.EntryUnit;
 import org.ehcache.core.statistics.StoreOperationOutcomes;
+import org.ehcache.spi.loaderwriter.CacheLoaderWriter;
 import utils.ConstantStringGenerator;
 
 import java.io.File;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -45,12 +47,44 @@ import static io.rainfall.execution.Executions.times;
 import static org.ehcache.config.builders.ResourcePoolsBuilder.heap;
 import static utils.Ehcache3Stats.findOperationStat;
 
-public class Ehcache3 {
+public class Ehcache3_withLoaderWriter {
 
   public static void main(String[] args) throws Exception {
+    final int nbElementsPerThread = 100000;
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
-        .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class, heap(100000L)
-            )
+        .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class, heap(nbElementsPerThread))
+            .withLoaderWriter(new CacheLoaderWriter<Long, String>() {
+              @Override
+              public String load(Long key) throws Exception {
+                return null;
+              }
+
+              @Override
+              public Map<Long, String> loadAll(Iterable<? extends Long> keys) throws Exception {
+                return null;
+              }
+
+              @Override
+              public void write(Long key, String value) throws Exception {
+
+              }
+
+              @Override
+              public void writeAll(Iterable<? extends Map.Entry<? extends Long, ? extends String>> entries) throws Exception {
+
+              }
+
+              @Override
+              public void delete(Long key) throws Exception {
+
+              }
+
+              @Override
+              public void deleteAll(Iterable<? extends Long> keys) throws Exception {
+
+              }
+            })
+            .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder().heap(100000L, EntryUnit.ENTRIES))
             .build())
         .build(true);
 
@@ -62,9 +96,8 @@ public class Ehcache3 {
     CacheConfig<Long, String> cacheConfig = new CacheConfig<Long, String>();
     cacheConfig.cache("cache1", cache1);
 
-    final File reportPath = new File("target/rainfall/" + Ehcache3.class.getName().replace('.', '/'));
+    final File reportPath = new File("target/rainfall/" + Ehcache3_withLoaderWriter.class.getName().replace('.', '/'));
 
-    final int nbElementsPerThread = 100000;
     Runner.setUp(
         Scenario.scenario("Loading phase")
             .exec(
@@ -83,8 +116,8 @@ public class Ehcache3 {
     t.schedule(new TimerTask() {
       @Override
       public void run() {
-        long puts = findOperationStat(cache1, "put", "onheap-store").count(StoreOperationOutcomes.PutOutcome.PUT);
-        long replaces = findOperationStat(cache1, "put", "onheap-store").count(StoreOperationOutcomes.PutOutcome.REPLACED);
+        long puts = findOperationStat(cache1, "compute", "onheap-store").count(StoreOperationOutcomes.ComputeOutcome.PUT);
+        long replaces = findOperationStat(cache1, "compute", "onheap-store").count(StoreOperationOutcomes.ComputeOutcome.HIT);
         long total = puts + replaces;
         System.out.println("             puts: " + puts);
         System.out.println("         replaces: " + replaces);

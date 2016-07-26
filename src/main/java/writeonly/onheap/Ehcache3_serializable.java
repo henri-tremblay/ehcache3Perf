@@ -39,13 +39,13 @@ import java.io.File;
 import static io.rainfall.configuration.ReportingConfig.html;
 import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
+import static org.ehcache.config.builders.ResourcePoolsBuilder.heap;
 
 public class Ehcache3_serializable {
 
   public static void main(String[] args) throws Exception {
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
-        .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(LongWrapper.class, StringWrapper.class)
-            .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder().heap(100000L, EntryUnit.ENTRIES))
+        .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(LongWrapper.class, StringWrapper.class, heap(100000L))
             .withKeySerializingCopier().withValueSerializingCopier()
             .build())
         .build(true);

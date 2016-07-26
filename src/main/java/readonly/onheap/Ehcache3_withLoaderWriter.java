@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package readonly.disk3tiers;
+package readonly.onheap;
 
 import io.rainfall.Runner;
 import io.rainfall.Scenario;
@@ -29,37 +29,67 @@ import org.ehcache.Cache;
 import org.ehcache.CacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
-import org.ehcache.config.builders.ResourcePoolsBuilder;
-import org.ehcache.config.units.EntryUnit;
-import org.ehcache.config.units.MemoryUnit;
-import org.ehcache.impl.config.persistence.CacheManagerPersistenceConfiguration;
-import org.ehcache.impl.config.serializer.DefaultSerializationProviderConfiguration;
-import org.ehcache.impl.serialization.CompactJavaSerializer;
+import org.ehcache.spi.loaderwriter.CacheLoaderWriter;
 
 import java.io.File;
+import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import static io.rainfall.configuration.ReportingConfig.html;
 import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
 import static io.rainfall.execution.Executions.times;
 import static org.ehcache.config.builders.ResourcePoolsBuilder.heap;
+import static utils.Ehcache3Stats.findOperationStat;
 
 /**
+ * analyze churn with $JAVA_HOME/bin/jmc
  * @author Ludovic Orban
  */
-public class Ehcache3 {
+public class Ehcache3_withLoaderWriter {
 
   public static void main(String[] args) throws Exception {
+    final int nbElementsPerThread = 100000;
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
-        .using(new DefaultSerializationProviderConfiguration()
-            .addSerializerFor(Long.class, (Class) CompactJavaSerializer.class)
-            .addSerializerFor(String.class, (Class) CompactJavaSerializer.class)
-        )
-        .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class, heap(1000).offheap(32, MemoryUnit.MB).disk(2, MemoryUnit.GB))
-            .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
-                )
-            )
-        .with(new CacheManagerPersistenceConfiguration(new File("target/rainfall/disk3tiers/ehcache3-persistence")))
+//        .using(new DefaultSerializationProviderConfiguration()
+//            .addSerializerFor(Long.class, (Class) CompactJavaSerializer.class)
+//            .addSerializerFor(String.class, (Class) CompactJavaSerializer.class)
+//        )
+        .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class, heap(nbElementsPerThread))
+//            .withKeySerializingCopier().withValueSerializingCopier()
+            .withLoaderWriter(new CacheLoaderWriter<Long, String>() {
+              @Override
+              public String load(Long key) throws Exception {
+                return null;
+              }
+
+              @Override
+              public Map<Long, String> loadAll(Iterable<? extends Long> keys) throws Exception {
+                return null;
+              }
+
+              @Override
+              public void write(Long key, String value) throws Exception {
+
+              }
+
+              @Override
+              public void writeAll(Iterable<? extends Map.Entry<? extends Long, ? extends String>> entries) throws Exception {
+
+              }
+
+              @Override
+              public void delete(Long key) throws Exception {
+
+              }
+
+              @Override
+              public void deleteAll(Iterable<? extends Long> keys) throws Exception {
+
+              }
+            })
+            .build())
         .build(true);
 
     final Cache<Long, String> cache1 = cacheManager.getCache("cache1", Long.class, String.class);
@@ -70,8 +100,7 @@ public class Ehcache3 {
     CacheConfig<Long, String> cacheConfig = new CacheConfig<Long, String>();
     cacheConfig.cache("cache1", cache1);
 
-    final int nbElementsPerThread = 100000;
-    final File reportPath = new File("target/rainfall/" + Ehcache3.class.getName().replace('.', '/'));
+    final File reportPath = new File("target/rainfall/" + Ehcache3_withLoaderWriter.class.getName().replace('.', '/'));
     Runner.setUp(
         Scenario.scenario("Loading phase")
             .exec(
@@ -85,25 +114,17 @@ public class Ehcache3 {
             cacheConfig)
         .start();
 
+    Timer t = new Timer(true);
+    t.schedule(new TimerTask() {
+      @Override
+      public void run() {
+        long computes = findOperationStat(cache1, "compute", "onheap-store").sum();
+        System.out.println("             computes: " + computes);
+      }
+    }, 1000, 1000);
+
+
     System.out.println("testing...");
-
-//    Timer t = new Timer(true);
-//    t.schedule(new TimerTask() {
-//      @Override
-//      public void run() {
-//        long onHeapHits = findStat(cache1, "getOrComputeIfAbsent", "onheap-store").count(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT);
-//        long offHeapHits = findStat(cache1, "getAndRemove", "local-offheap").count(LowerCachingTierOperationsOutcome.GetAndRemoveOutcome.HIT_REMOVED);
-//        long diskHits = findStat(cache1, "computeIfAbsentAndFault", "local-disk").count(AuthoritativeTierOperationOutcomes.ComputeIfAbsentAndFaultOutcome.HIT);
-//        long total = onHeapHits + offHeapHits + diskHits;
-//        System.out.println("        heap hits: " + onHeapHits);
-//        System.out.println("     offheap hits: " + offHeapHits);
-//        System.out.println("        disk hits: " + diskHits);
-//        System.out.printf ("   heap hit ratio: %.1f%%\n", ((double) onHeapHits / total * 100.0));
-//        System.out.printf ("offheap hit ratio: %.1f%%\n", ((double) offHeapHits / total * 100.0));
-//        System.out.printf ("   disk hit ratio: %.1f%%\n", ((double) diskHits / total * 100.0));
-//      }
-//    }, 1000, 1000);
-
 
     Runner.setUp(
         Scenario.scenario("Testing phase")

@@ -15,7 +15,6 @@
  */
 package utils;
 
-import org.ehcache.exceptions.SerializerException;
 import org.ehcache.impl.internal.concurrent.ConcurrentHashMap;
 import org.ehcache.impl.internal.util.ByteBufferInputStream;
 import org.ehcache.spi.serialization.Serializer;
@@ -75,7 +74,7 @@ public class ClassCachingCompactJavaSerializer<T> implements Serializer<T>, Clos
   }
 
   @Override
-  public ByteBuffer serialize(T object) throws SerializerException {
+  public ByteBuffer serialize(T object) {
     try {
       ByteArrayOutputStream bout = new ByteArrayOutputStream();
       ObjectOutputStream oout = getObjectOutputStream(bout);
@@ -86,12 +85,12 @@ public class ClassCachingCompactJavaSerializer<T> implements Serializer<T>, Clos
       }
       return ByteBuffer.wrap(bout.toByteArray());
     } catch (IOException e) {
-      throw new SerializerException(e);
+      throw new RuntimeException(e);
     }
   }
 
   @Override
-  public T read(ByteBuffer binary) throws ClassNotFoundException, SerializerException {
+  public T read(ByteBuffer binary) throws ClassNotFoundException {
     try {
       ObjectInputStream oin = getObjectInputStream(new ByteBufferInputStream(binary));
       try {
@@ -100,7 +99,7 @@ public class ClassCachingCompactJavaSerializer<T> implements Serializer<T>, Clos
         oin.close();
       }
     } catch (IOException e) {
-      throw new SerializerException(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -113,7 +112,7 @@ public class ClassCachingCompactJavaSerializer<T> implements Serializer<T>, Clos
   }
 
   @Override
-  public boolean equals(T object, ByteBuffer binary) throws ClassNotFoundException, SerializerException {
+  public boolean equals(T object, ByteBuffer binary) throws ClassNotFoundException {
     return object.equals(read(binary));
   }
 

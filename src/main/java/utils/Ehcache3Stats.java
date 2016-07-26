@@ -22,6 +22,7 @@ import org.terracotta.context.query.Matcher;
 import org.terracotta.context.query.Matchers;
 import org.terracotta.context.query.Query;
 import org.terracotta.statistics.OperationStatistic;
+import org.terracotta.statistics.ValueStatistic;
 
 import java.util.Collections;
 import java.util.Map;
@@ -40,7 +41,7 @@ import static org.terracotta.context.query.QueryBuilder.queryBuilder;
  */
 public class Ehcache3Stats {
 
-  public static OperationStatistic findStat(Cache<?, ?> cache1, final String statName, final String tag) {
+  public static OperationStatistic findOperationStat(Cache<?, ?> cache1, final String statName, final String tag) {
     Query q = queryBuilder().chain(self())
         .descendants().filter(context(identifier(subclassOf(OperationStatistic.class)))).build();
 
@@ -61,6 +62,29 @@ public class Ehcache3Stats {
 
     TreeNode node = result.iterator().next();
     return (OperationStatistic) node.getContext().attributes().get("this");
+  }
+
+  public static ValueStatistic findValueStat(Cache<?, ?> cache1, final String statName, final String tag) {
+    Query q = queryBuilder().chain(self())
+        .descendants().filter(context(identifier(subclassOf(ValueStatistic.class)))).build();
+
+    Set<TreeNode> nodes = q.execute(Collections.singleton(ContextManager.nodeFor(cache1)));
+    Set<TreeNode> result = queryBuilder()
+        .filter(
+            context(attributes(Matchers.<Map<String, Object>>allOf(
+                hasAttribute("name", statName), hasAttribute("tags", new Matcher<Set<String>>() {
+                  @Override
+                  protected boolean matchesSafely(Set<String> object) {
+                    return object.contains(tag);
+                  }
+                }))))).build().execute(nodes);
+
+    if (result.size() != 1) {
+      throw new RuntimeException("single stat not found; found " + result.size());
+    }
+
+    TreeNode node = result.iterator().next();
+    return (ValueStatistic) node.getContext().attributes().get("this");
   }
 
 }

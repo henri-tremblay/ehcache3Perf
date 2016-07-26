@@ -40,14 +40,15 @@ import java.io.File;
 import static io.rainfall.configuration.ReportingConfig.html;
 import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
+import static org.ehcache.config.builders.ResourcePoolsBuilder.heap;
 
 public class Ehcache3_serializable {
 
   public static void main(String[] args) throws Exception {
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
-        .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(LongWrapper.class, StringWrapper.class)
+        .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(LongWrapper.class, StringWrapper.class, heap(1000).offheap(2, MemoryUnit.GB))
             .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
-                .heap(1000, EntryUnit.ENTRIES).offheap(2, MemoryUnit.GB))
+                )
             .build())
         .build(true);
 

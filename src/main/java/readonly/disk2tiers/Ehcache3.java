@@ -44,7 +44,8 @@ import static io.rainfall.configuration.ReportingConfig.html;
 import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
 import static io.rainfall.execution.Executions.times;
-import static utils.Ehcache3Stats.findStat;
+import static org.ehcache.config.builders.ResourcePoolsBuilder.heap;
+import static utils.Ehcache3Stats.findOperationStat;
 
 /**
  * @author Ludovic Orban
@@ -57,9 +58,10 @@ public class Ehcache3 {
 //            .addSerializerFor(Long.class, (Class) CompactJavaSerializer.class)
 //            .addSerializerFor(String.class, (Class) CompactJavaSerializer.class)
 //        )
-        .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class)
+        .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class, heap(1000).disk(2, MemoryUnit.GB))
+//            .withKeySerializer(new LongSerializer()).withValueSerializer(new StringSerializer())
             .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
-                .heap(1000, EntryUnit.ENTRIES).disk(2, MemoryUnit.GB))
+                )
             )
         .with(new CacheManagerPersistenceConfiguration(new File("target/rainfall/disk2tiers/ehcache3-persistence")))
         .build(true);
@@ -93,8 +95,8 @@ public class Ehcache3 {
     t.schedule(new TimerTask() {
       @Override
       public void run() {
-        long onHeapHits = findStat(cache1, "getOrComputeIfAbsent", "onheap-store").count(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT);
-        long diskHits = findStat(cache1, "computeIfAbsentAndFault", "local-disk").count(AuthoritativeTierOperationOutcomes.ComputeIfAbsentAndFaultOutcome.HIT);
+        long onHeapHits = findOperationStat(cache1, "getOrComputeIfAbsent", "onheap-store").count(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT);
+        long diskHits = findOperationStat(cache1, "getAndFault", "local-disk").count(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.HIT);
         long total = onHeapHits + diskHits;
         System.out.println("        heap hits: " + onHeapHits);
         System.out.println("        disk hits: " + diskHits);

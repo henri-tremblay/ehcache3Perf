@@ -18,30 +18,37 @@ package utils;
 import org.ehcache.spi.serialization.Serializer;
 
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
+import java.util.Arrays;
 
 /**
  * @author Ludovic Orban
  */
-public class StringAsCharSerializer implements Serializer<String> {
+public class ByteArraySerializer implements Serializer {
+
+  public ByteArraySerializer() {
+  }
+
+  public ByteArraySerializer(ClassLoader classLoader) {
+  }
+
+
   @Override
-  public ByteBuffer serialize(String object) {
-    char[] chars = object.toCharArray();
-    ByteBuffer byteBuffer = ByteBuffer.allocate(chars.length * 2);
-    CharBuffer charBuffer = byteBuffer.asCharBuffer();
-    charBuffer.put(chars);
-    return byteBuffer;
+  public ByteBuffer serialize(Object o) {
+    byte[] array = (byte[]) o;
+    ByteBuffer buffer = ByteBuffer.wrap(array);
+    return buffer;
   }
 
   @Override
-  public String read(ByteBuffer binary) throws ClassNotFoundException {
-    char[] chars = new char[binary.remaining() / 2];
-    binary.asCharBuffer().get(chars);
-    return new String(chars);
+  public Object read(ByteBuffer byteBuffer) throws ClassNotFoundException {
+    byte[] array = new byte[byteBuffer.remaining()];
+    byteBuffer.get(array);
+    return array;
   }
 
   @Override
-  public boolean equals(String object, ByteBuffer binary) throws ClassNotFoundException {
-    return object.equals(read(binary));
+  public boolean equals(Object o, ByteBuffer byteBuffer) throws ClassNotFoundException {
+    byte[] array = (byte[]) o;
+    return Arrays.equals(array, (byte[]) read(byteBuffer));
   }
 }

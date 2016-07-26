@@ -16,7 +16,6 @@
 package utils;
 
 import net.sf.ehcache.util.concurrent.LongAdder;
-import org.ehcache.exceptions.SerializerException;
 import org.ehcache.impl.serialization.CompactJavaSerializer;
 
 import java.io.PrintWriter;
@@ -49,12 +48,12 @@ public class ProfilingCompactJavaSerializer extends CompactJavaSerializer {
   }
 
   @Override
-  public ByteBuffer serialize(Object object) throws SerializerException {
+  public ByteBuffer serialize(Object object) {
     return super.serialize(object);
   }
 
   @Override
-  public Object read(ByteBuffer binary) throws ClassNotFoundException, SerializerException {
+  public Object read(ByteBuffer binary) throws ClassNotFoundException {
     String stackTrace = getStackTrace();
     LongAdder counter = new LongAdder();
     LongAdder existing = reads.putIfAbsent(stackTrace, counter);
@@ -67,7 +66,7 @@ public class ProfilingCompactJavaSerializer extends CompactJavaSerializer {
   }
 
   @Override
-  public boolean equals(Object object, ByteBuffer binary) throws ClassNotFoundException, SerializerException {
+  public boolean equals(Object object, ByteBuffer binary) throws ClassNotFoundException {
     String stackTrace = getStackTrace();
     LongAdder counter = new LongAdder();
     LongAdder existing = equals.putIfAbsent(stackTrace, counter);

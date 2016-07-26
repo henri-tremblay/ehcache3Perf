@@ -43,7 +43,8 @@ import static io.rainfall.configuration.ReportingConfig.html;
 import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
 import static io.rainfall.execution.Executions.times;
-import static utils.Ehcache3Stats.findStat;
+import static org.ehcache.config.builders.ResourcePoolsBuilder.heap;
+import static utils.Ehcache3Stats.findOperationStat;
 
 /**
  * @author Ludovic Orban
@@ -52,9 +53,9 @@ public class Ehcache3 {
 
   public static void main(String[] args) throws Exception {
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
-        .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class)
+        .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class, heap(1000).offheap(2, MemoryUnit.GB))
             .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
-                .heap(1000, EntryUnit.ENTRIES).offheap(2, MemoryUnit.GB))
+                )
             .build())
         .build(true);
 
@@ -87,8 +88,8 @@ public class Ehcache3 {
     t.schedule(new TimerTask() {
       @Override
       public void run() {
-        long onHeapHits = findStat(cache1, "getOrComputeIfAbsent", "onheap-store").count(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT);
-        long offHeapHits = findStat(cache1, "computeIfAbsentAndFault", "local-offheap").count(AuthoritativeTierOperationOutcomes.ComputeIfAbsentAndFaultOutcome.HIT);
+        long onHeapHits = findOperationStat(cache1, "getOrComputeIfAbsent", "onheap-store").count(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT);
+        long offHeapHits = findOperationStat(cache1, "computeIfAbsentAndFault", "local-offheap").count(AuthoritativeTierOperationOutcomes.ComputeIfAbsentAndFaultOutcome.HIT);
         long total = onHeapHits + offHeapHits;
         System.out.println("        heap hits: " + onHeapHits);
         System.out.println("     offheap hits: " + offHeapHits);

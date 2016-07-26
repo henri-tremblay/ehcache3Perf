@@ -15,7 +15,6 @@
  */
 package utils;
 
-import org.ehcache.exceptions.SerializerException;
 import org.ehcache.impl.serialization.CompactJavaSerializer;
 import sun.nio.ch.DirectBuffer;
 
@@ -40,12 +39,12 @@ public class CachingCompactJavaSerializer extends CompactJavaSerializer {
   }
 
   @Override
-  public ByteBuffer serialize(Object object) throws SerializerException {
+  public ByteBuffer serialize(Object object) {
     return super.serialize(object);
   }
 
   @Override
-  public Object read(ByteBuffer binary) throws ClassNotFoundException, SerializerException {
+  public Object read(ByteBuffer binary) throws ClassNotFoundException {
     DirectBuffer directBuffer = null;
     if (binary.isDirect()) {
       directBuffer = (DirectBuffer) binary;
@@ -64,7 +63,7 @@ public class CachingCompactJavaSerializer extends CompactJavaSerializer {
   }
 
   @Override
-  public boolean equals(Object object, ByteBuffer binary) throws ClassNotFoundException, SerializerException {
+  public boolean equals(Object object, ByteBuffer binary) throws ClassNotFoundException {
     return object.equals(read(binary));
   }
 }

@@ -29,13 +29,18 @@ import org.ehcache.Cache;
 import org.ehcache.CacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
+import org.ehcache.core.statistics.StoreOperationOutcomes;
 
 import java.io.File;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import static io.rainfall.configuration.ReportingConfig.html;
 import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
 import static io.rainfall.execution.Executions.times;
+import static org.ehcache.config.builders.ResourcePoolsBuilder.heap;
+import static utils.Ehcache3Stats.findOperationStat;
 
 /**
  * analyze churn with $JAVA_HOME/bin/jmc
@@ -44,17 +49,18 @@ import static io.rainfall.execution.Executions.times;
 public class Ehcache3 {
 
   public static void main(String[] args) throws Exception {
+    final int nbElementsPerThread = 100000;
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
 //        .using(new DefaultSerializationProviderConfiguration()
 //            .addSerializerFor(Long.class, (Class) CompactJavaSerializer.class)
 //            .addSerializerFor(String.class, (Class) CompactJavaSerializer.class)
 //        )
-        .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class)
+        .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class, heap(nbElementsPerThread))
 //            .withKeySerializingCopier().withValueSerializingCopier()
             .build())
         .build(true);
 
-    Cache<Long, String> cache1 = cacheManager.getCache("cache1", Long.class, String.class);
+    final Cache<Long, String> cache1 = cacheManager.getCache("cache1", Long.class, String.class);
 
     LongGenerator keyGenerator = new LongGenerator();
     StringGenerator valueGenerator = new StringGenerator(4096);
@@ -62,7 +68,6 @@ public class Ehcache3 {
     CacheConfig<Long, String> cacheConfig = new CacheConfig<Long, String>();
     cacheConfig.cache("cache1", cache1);
 
-    final int nbElementsPerThread = 100000;
     final File reportPath = new File("target/rainfall/" + Ehcache3.class.getName().replace('.', '/'));
     Runner.setUp(
         Scenario.scenario("Loading phase")
@@ -76,6 +81,15 @@ public class Ehcache3 {
             report(EhcacheResult.class),
             cacheConfig)
         .start();
+
+    Timer t = new Timer(true);
+    t.schedule(new TimerTask() {
+      @Override
+      public void run() {
+        long gets = findOperationStat(cache1, "get", "onheap-store").sum();
+        System.out.println("             gets: " + gets);
+      }
+    }, 1000, 1000);
 
     System.out.println("testing...");
 
