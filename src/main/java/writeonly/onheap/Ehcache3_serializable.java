@@ -29,6 +29,8 @@ import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.config.units.EntryUnit;
+import org.ehcache.core.spi.service.StatisticsService;
+import org.ehcache.impl.internal.statistics.DefaultStatisticsService;
 import utils.ConstantStringWrapperGenerator;
 import utils.LongWrapper;
 import utils.LongWrapperGenerator;
@@ -44,7 +46,9 @@ import static org.ehcache.config.builders.ResourcePoolsBuilder.heap;
 public class Ehcache3_serializable {
 
   public static void main(String[] args) throws Exception {
+    final StatisticsService statisticsService = new DefaultStatisticsService();
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
+        .using(statisticsService)
         .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(LongWrapper.class, StringWrapper.class, heap(100000L))
             .withKeySerializingCopier().withValueSerializingCopier()
             .build())

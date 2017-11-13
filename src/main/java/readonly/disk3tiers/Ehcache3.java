@@ -32,11 +32,15 @@ import org.ehcache.config.builders.CacheManagerBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.config.units.EntryUnit;
 import org.ehcache.config.units.MemoryUnit;
+import org.ehcache.core.spi.service.StatisticsService;
 import org.ehcache.impl.config.persistence.CacheManagerPersistenceConfiguration;
 import org.ehcache.impl.config.serializer.DefaultSerializationProviderConfiguration;
+import org.ehcache.impl.internal.statistics.DefaultStatisticsService;
 import org.ehcache.impl.serialization.CompactJavaSerializer;
 
 import java.io.File;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import static io.rainfall.configuration.ReportingConfig.html;
 import static io.rainfall.configuration.ReportingConfig.report;
@@ -50,14 +54,14 @@ import static org.ehcache.config.builders.ResourcePoolsBuilder.heap;
 public class Ehcache3 {
 
   public static void main(String[] args) throws Exception {
+    final StatisticsService statisticsService = new DefaultStatisticsService();
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
+        .using(statisticsService)
         .using(new DefaultSerializationProviderConfiguration()
             .addSerializerFor(Long.class, (Class) CompactJavaSerializer.class)
             .addSerializerFor(String.class, (Class) CompactJavaSerializer.class)
         )
         .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class, heap(1000).offheap(32, MemoryUnit.MB).disk(2, MemoryUnit.GB))
-            .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
-                )
             )
         .with(new CacheManagerPersistenceConfiguration(new File("target/rainfall/disk3tiers/ehcache3-persistence")))
         .build(true);
@@ -87,22 +91,22 @@ public class Ehcache3 {
 
     System.out.println("testing...");
 
-//    Timer t = new Timer(true);
-//    t.schedule(new TimerTask() {
-//      @Override
-//      public void run() {
-//        long onHeapHits = findStat(cache1, "getOrComputeIfAbsent", "onheap-store").count(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT);
-//        long offHeapHits = findStat(cache1, "getAndRemove", "local-offheap").count(LowerCachingTierOperationsOutcome.GetAndRemoveOutcome.HIT_REMOVED);
-//        long diskHits = findStat(cache1, "computeIfAbsentAndFault", "local-disk").count(AuthoritativeTierOperationOutcomes.ComputeIfAbsentAndFaultOutcome.HIT);
-//        long total = onHeapHits + offHeapHits + diskHits;
-//        System.out.println("        heap hits: " + onHeapHits);
-//        System.out.println("     offheap hits: " + offHeapHits);
-//        System.out.println("        disk hits: " + diskHits);
-//        System.out.printf ("   heap hit ratio: %.1f%%\n", ((double) onHeapHits / total * 100.0));
-//        System.out.printf ("offheap hit ratio: %.1f%%\n", ((double) offHeapHits / total * 100.0));
-//        System.out.printf ("   disk hit ratio: %.1f%%\n", ((double) diskHits / total * 100.0));
-//      }
-//    }, 1000, 1000);
+    Timer t = new Timer(true);
+    t.schedule(new TimerTask() {
+      @Override
+      public void run() {
+        long onHeapHits = statisticsService.getCacheStatistics("cache1").getTierStatistics().get("OnHeap").getHits();
+        long offHeapHits = statisticsService.getCacheStatistics("cache1").getTierStatistics().get("OffHeap").getHits();
+        long diskHits = statisticsService.getCacheStatistics("cache1").getTierStatistics().get("Disk").getHits();
+        long total = onHeapHits + offHeapHits + diskHits;
+        System.out.println("        heap hits: " + onHeapHits);
+        System.out.println("     offheap hits: " + offHeapHits);
+        System.out.println("        disk hits: " + diskHits);
+        System.out.printf ("   heap hit ratio: %.1f%%\n", ((double) onHeapHits / total * 100.0));
+        System.out.printf ("offheap hit ratio: %.1f%%\n", ((double) offHeapHits / total * 100.0));
+        System.out.printf ("   disk hit ratio: %.1f%%\n", ((double) diskHits / total * 100.0));
+      }
+    }, 1000, 1000);
 
 
     Runner.setUp(

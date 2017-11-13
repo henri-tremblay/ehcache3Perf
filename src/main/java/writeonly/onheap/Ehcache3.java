@@ -29,9 +29,8 @@ import org.ehcache.Cache;
 import org.ehcache.CacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
-import org.ehcache.config.builders.ResourcePoolsBuilder;
-import org.ehcache.config.units.EntryUnit;
-import org.ehcache.core.statistics.StoreOperationOutcomes;
+import org.ehcache.core.spi.service.StatisticsService;
+import org.ehcache.impl.internal.statistics.DefaultStatisticsService;
 import utils.ConstantStringGenerator;
 
 import java.io.File;
@@ -43,12 +42,13 @@ import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
 import static io.rainfall.execution.Executions.times;
 import static org.ehcache.config.builders.ResourcePoolsBuilder.heap;
-import static utils.Ehcache3Stats.findOperationStat;
 
 public class Ehcache3 {
 
   public static void main(String[] args) throws Exception {
+    final StatisticsService statisticsService = new DefaultStatisticsService();
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
+        .using(statisticsService)
         .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class, heap(100000L)
             )
             .build())
@@ -83,8 +83,8 @@ public class Ehcache3 {
     t.schedule(new TimerTask() {
       @Override
       public void run() {
-        long puts = findOperationStat(cache1, "put", "onheap-store").count(StoreOperationOutcomes.PutOutcome.PUT);
-        long replaces = findOperationStat(cache1, "put", "onheap-store").count(StoreOperationOutcomes.PutOutcome.REPLACED);
+        long puts = statisticsService.getCacheStatistics("cache1").getTierStatistics().get("OnHeap").getPuts();
+        long replaces = statisticsService.getCacheStatistics("cache1").getTierStatistics().get("OnHeap").getUpdates();
         long total = puts + replaces;
         System.out.println("             puts: " + puts);
         System.out.println("         replaces: " + replaces);

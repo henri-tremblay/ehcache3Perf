@@ -15,7 +15,6 @@
  */
 package utils;
 
-import net.sf.ehcache.util.concurrent.LongAdder;
 import org.ehcache.impl.serialization.CompactJavaSerializer;
 
 import java.io.PrintWriter;
@@ -23,6 +22,7 @@ import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * @author Ludovic Orban

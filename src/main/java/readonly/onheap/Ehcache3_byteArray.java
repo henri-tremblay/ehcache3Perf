@@ -29,7 +29,9 @@ import org.ehcache.Cache;
 import org.ehcache.CacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
+import org.ehcache.core.spi.service.StatisticsService;
 import org.ehcache.impl.config.serializer.DefaultSerializationProviderConfiguration;
+import org.ehcache.impl.internal.statistics.DefaultStatisticsService;
 import utils.ByteArraySerializer;
 
 import java.io.File;
@@ -41,7 +43,6 @@ import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
 import static io.rainfall.execution.Executions.times;
 import static org.ehcache.config.builders.ResourcePoolsBuilder.heap;
-import static utils.Ehcache3Stats.findOperationStat;
 
 /**
  * analyze churn with $JAVA_HOME/bin/jmc
@@ -51,7 +52,9 @@ public class Ehcache3_byteArray {
 
   public static void main(String[] args) throws Exception {
     final int nbElementsPerThread = 100000;
+    final StatisticsService statisticsService = new DefaultStatisticsService();
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
+        .using(statisticsService)
         .using(new DefaultSerializationProviderConfiguration()
             .addSerializerFor(byte[].class, (Class) ByteArraySerializer.class)
         )
@@ -86,8 +89,8 @@ public class Ehcache3_byteArray {
     t.schedule(new TimerTask() {
       @Override
       public void run() {
-        long gets = findOperationStat(cache1, "get", "onheap-store").sum();
-        System.out.println("             gets: " + gets);
+        long hits = statisticsService.getCacheStatistics("cache1").getTierStatistics().get("OnHeap").getHits();
+        System.out.println("             hits: " + hits);
       }
     }, 1000, 1000);
 

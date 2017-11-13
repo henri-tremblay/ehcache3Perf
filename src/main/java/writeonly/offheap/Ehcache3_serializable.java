@@ -47,8 +47,6 @@ public class Ehcache3_serializable {
   public static void main(String[] args) throws Exception {
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
         .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(LongWrapper.class, StringWrapper.class, heap(1000).offheap(2, MemoryUnit.GB))
-            .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
-                )
             .build())
         .build(true);
 

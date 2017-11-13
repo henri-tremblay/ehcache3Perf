@@ -29,7 +29,8 @@ import org.ehcache.Cache;
 import org.ehcache.CacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
-import org.ehcache.core.statistics.StoreOperationOutcomes;
+import org.ehcache.core.spi.service.StatisticsService;
+import org.ehcache.impl.internal.statistics.DefaultStatisticsService;
 
 import java.io.File;
 import java.util.Timer;
@@ -40,7 +41,6 @@ import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
 import static io.rainfall.execution.Executions.times;
 import static org.ehcache.config.builders.ResourcePoolsBuilder.heap;
-import static utils.Ehcache3Stats.findOperationStat;
 
 /**
  * analyze churn with $JAVA_HOME/bin/jmc
@@ -50,7 +50,9 @@ public class Ehcache3 {
 
   public static void main(String[] args) throws Exception {
     final int nbElementsPerThread = 100000;
+    final StatisticsService statisticsService = new DefaultStatisticsService();
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
+        .using(statisticsService)
 //        .using(new DefaultSerializationProviderConfiguration()
 //            .addSerializerFor(Long.class, (Class) CompactJavaSerializer.class)
 //            .addSerializerFor(String.class, (Class) CompactJavaSerializer.class)
@@ -86,8 +88,8 @@ public class Ehcache3 {
     t.schedule(new TimerTask() {
       @Override
       public void run() {
-        long gets = findOperationStat(cache1, "get", "onheap-store").sum();
-        System.out.println("             gets: " + gets);
+        long hits = statisticsService.getCacheStatistics("cache1").getTierStatistics().get("OnHeap").getHits();
+        System.out.println("             hits: " + hits);
       }
     }, 1000, 1000);
 

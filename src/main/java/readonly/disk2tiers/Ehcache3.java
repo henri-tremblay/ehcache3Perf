@@ -30,11 +30,10 @@ import org.ehcache.CacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
-import org.ehcache.config.units.EntryUnit;
 import org.ehcache.config.units.MemoryUnit;
-import org.ehcache.core.statistics.AuthoritativeTierOperationOutcomes;
-import org.ehcache.core.statistics.CachingTierOperationOutcomes;
+import org.ehcache.core.spi.service.StatisticsService;
 import org.ehcache.impl.config.persistence.CacheManagerPersistenceConfiguration;
+import org.ehcache.impl.internal.statistics.DefaultStatisticsService;
 
 import java.io.File;
 import java.util.Timer;
@@ -45,7 +44,6 @@ import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
 import static io.rainfall.execution.Executions.times;
 import static org.ehcache.config.builders.ResourcePoolsBuilder.heap;
-import static utils.Ehcache3Stats.findOperationStat;
 
 /**
  * @author Ludovic Orban
@@ -53,7 +51,9 @@ import static utils.Ehcache3Stats.findOperationStat;
 public class Ehcache3 {
 
   public static void main(String[] args) throws Exception {
+    final StatisticsService statisticsService = new DefaultStatisticsService();
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
+        .using(statisticsService)
 //        .using(new DefaultSerializationProviderConfiguration()
 //            .addSerializerFor(Long.class, (Class) CompactJavaSerializer.class)
 //            .addSerializerFor(String.class, (Class) CompactJavaSerializer.class)
@@ -95,8 +95,8 @@ public class Ehcache3 {
     t.schedule(new TimerTask() {
       @Override
       public void run() {
-        long onHeapHits = findOperationStat(cache1, "getOrComputeIfAbsent", "onheap-store").count(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT);
-        long diskHits = findOperationStat(cache1, "getAndFault", "local-disk").count(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.HIT);
+        long onHeapHits = statisticsService.getCacheStatistics("cache1").getTierStatistics().get("OnHeap").getHits();
+        long diskHits = statisticsService.getCacheStatistics("cache1").getTierStatistics().get("Disk").getHits();
         long total = onHeapHits + diskHits;
         System.out.println("        heap hits: " + onHeapHits);
         System.out.println("        disk hits: " + diskHits);

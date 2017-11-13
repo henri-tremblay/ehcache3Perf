@@ -27,11 +27,9 @@ import org.ehcache.Cache;
 import org.ehcache.CacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
-import org.ehcache.config.builders.ResourcePoolsBuilder;
-import org.ehcache.config.units.EntryUnit;
 import org.ehcache.config.units.MemoryUnit;
-import org.ehcache.core.statistics.AuthoritativeTierOperationOutcomes;
-import org.ehcache.core.statistics.CachingTierOperationOutcomes;
+import org.ehcache.core.spi.service.StatisticsService;
+import org.ehcache.impl.internal.statistics.DefaultStatisticsService;
 import utils.LongWrapper;
 import utils.LongWrapperGenerator;
 import utils.StringWrapper;
@@ -46,7 +44,6 @@ import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
 import static io.rainfall.execution.Executions.times;
 import static org.ehcache.config.builders.ResourcePoolsBuilder.heap;
-import static utils.Ehcache3Stats.findOperationStat;
 
 /**
  * @author Ludovic Orban
@@ -54,10 +51,10 @@ import static utils.Ehcache3Stats.findOperationStat;
 public class Ehcache3_serializable {
 
   public static void main(String[] args) throws Exception {
+    final StatisticsService statisticsService = new DefaultStatisticsService();
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
+        .using(statisticsService)
         .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(LongWrapper.class, StringWrapper.class, heap(1000).offheap(2, MemoryUnit.GB))
-            .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
-                )
             .build())
         .build(true);
 
@@ -90,8 +87,8 @@ public class Ehcache3_serializable {
     t.schedule(new TimerTask() {
       @Override
       public void run() {
-        long onHeapHits = findOperationStat(cache1, "getOrComputeIfAbsent", "onheap-store").count(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT);
-        long offHeapHits = findOperationStat(cache1, "computeIfAbsentAndFault", "local-offheap").count(AuthoritativeTierOperationOutcomes.ComputeIfAbsentAndFaultOutcome.HIT);
+        long onHeapHits = statisticsService.getCacheStatistics("cache1").getTierStatistics().get("OnHeap").getHits();
+        long offHeapHits = statisticsService.getCacheStatistics("cache1").getTierStatistics().get("OffHeap").getHits();
         long total = onHeapHits + offHeapHits;
         System.out.println("        heap hits: " + onHeapHits);
         System.out.println("     offheap hits: " + offHeapHits);

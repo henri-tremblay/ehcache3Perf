@@ -31,7 +31,8 @@ import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.config.units.EntryUnit;
-import org.ehcache.core.statistics.StoreOperationOutcomes;
+import org.ehcache.core.spi.service.StatisticsService;
+import org.ehcache.impl.internal.statistics.DefaultStatisticsService;
 import org.ehcache.spi.loaderwriter.CacheLoaderWriter;
 import utils.ConstantStringGenerator;
 
@@ -45,13 +46,14 @@ import static io.rainfall.configuration.ReportingConfig.report;
 import static io.rainfall.execution.Executions.during;
 import static io.rainfall.execution.Executions.times;
 import static org.ehcache.config.builders.ResourcePoolsBuilder.heap;
-import static utils.Ehcache3Stats.findOperationStat;
 
 public class Ehcache3_withLoaderWriter {
 
   public static void main(String[] args) throws Exception {
     final int nbElementsPerThread = 100000;
+    final StatisticsService statisticsService = new DefaultStatisticsService();
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
+        .using(statisticsService)
         .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class, heap(nbElementsPerThread))
             .withLoaderWriter(new CacheLoaderWriter<Long, String>() {
               @Override
@@ -116,8 +118,8 @@ public class Ehcache3_withLoaderWriter {
     t.schedule(new TimerTask() {
       @Override
       public void run() {
-        long puts = findOperationStat(cache1, "compute", "onheap-store").count(StoreOperationOutcomes.ComputeOutcome.PUT);
-        long replaces = findOperationStat(cache1, "compute", "onheap-store").count(StoreOperationOutcomes.ComputeOutcome.HIT);
+        long puts = statisticsService.getCacheStatistics("cache1").getTierStatistics().get("OnHeap").getPuts();
+        long replaces = statisticsService.getCacheStatistics("cache1").getTierStatistics().get("OnHeap").getUpdates();
         long total = puts + replaces;
         System.out.println("             puts: " + puts);
         System.out.println("         replaces: " + replaces);

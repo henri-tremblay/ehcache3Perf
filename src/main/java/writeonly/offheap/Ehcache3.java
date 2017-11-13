@@ -29,7 +29,6 @@ import org.ehcache.CacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
-import org.ehcache.config.units.EntryUnit;
 import org.ehcache.config.units.MemoryUnit;
 import utils.ConstantStringGenerator;
 
@@ -45,8 +44,6 @@ public class Ehcache3 {
   public static void main(String[] args) throws Exception {
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
         .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class, heap(1000L).offheap(2, MemoryUnit.GB))
-            .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
-                )
             .build())
         .build(true);
 
