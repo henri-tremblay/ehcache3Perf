@@ -60,8 +60,6 @@ public class Ehcache3 {
 //        )
         .withCache("cache1", CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class, heap(1000).disk(2, MemoryUnit.GB))
 //            .withKeySerializer(new LongSerializer()).withValueSerializer(new StringSerializer())
-            .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
-                )
             )
         .with(new CacheManagerPersistenceConfiguration(new File("target/rainfall/disk2tiers/ehcache3-persistence")))
         .build(true);
